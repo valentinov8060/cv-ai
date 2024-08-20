@@ -5,7 +5,7 @@ const RootLayout = ({ children }: { children: ReactNode }) => {
   return (
     <html lang="en">
       <head>
-        <title>CV AI</title>
+        <title>CV-AI</title>
       </head>
       <body>
         {children}

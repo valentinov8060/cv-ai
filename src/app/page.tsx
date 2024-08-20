@@ -15,7 +15,7 @@ const Home: React.FC = () => {
 
   return (
     <div>
-      <h1>Profile page</h1>
+      <h1 className='text-xl font-bold'>Profile page</h1>
       <p>Name: {user?.displayName}</p>
       <p>Email: {user?.email}</p>
       <p>Status: {status}</p>
