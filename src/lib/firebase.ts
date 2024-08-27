@@ -20,7 +20,9 @@ const googleProvider = new GoogleAuthProvider();
 
 const signInWithGoogle = async () => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
+    const result = await signInWithPopup(auth, googleProvider.setCustomParameters({
+      prompt: 'select_account'
+    }));
     const user = result.user;
     console.log('User info:', user);
   } catch (error) {

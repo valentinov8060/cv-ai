@@ -24,7 +24,7 @@ const Login: React.FC = () => {
     <div className="flex flex-col items-center justify-center border border-gray-300 h-screen">
       <div>
         <h1 className="text-2xl font-bold mb-4">Welcome to the CV-AI</h1>
-        <p>You can make your cv here, with AI</p>
+        <p>You can make your cv here with AI</p>
       </div>
       <div className="flex flex-col items-center p-5 border border-gray-300 rounded-md">
         <h1 className="text-2xl mb-4">Log in to the app</h1>
