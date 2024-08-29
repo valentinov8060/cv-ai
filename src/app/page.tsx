@@ -2,11 +2,12 @@
 'use client';
 
 import React, { useState, useRef, ChangeEvent, RefObject } from 'react';
-import { generateCV, formatCVResponse } from '../lib/generateCV';
+import { generateCV, formatCVResponse, generatePDF } from '../lib/generateCV';
 
 const ChatBot: React.FC = () => {
   const [input, setInput] = useState<string>('');
   const [output, setOutput] = useState<string>('');
+  const [response, setResponse] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
 
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef<HTMLTextAreaElement>(null);
@@ -16,16 +17,16 @@ const ChatBot: React.FC = () => {
     const wordCount = text.trim().split(/\s+/).length;
 
     if (wordCount > 2048) {
-      alert("Maximum 2048 words allowed.");
+      alert('Maximum 2048 words allowed.');
       return;
     }
 
     setInput(text);
-    // Menyesuaikan tinggi textarea secara otomatis
+
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-      // Membatasi height maksimal untuk scrollbar
+
       if (textareaRef.current.scrollHeight > 150) {
         textareaRef.current.style.height = '150px';
         textareaRef.current.style.overflowY = 'scroll';
@@ -42,6 +43,7 @@ const ChatBot: React.FC = () => {
 
     try {
       const response = await generateCV(input);
+      setResponse(response);
       const formattedCV = formatCVResponse(response);
       setOutput(formattedCV);
     } catch (error) {
@@ -63,10 +65,11 @@ const ChatBot: React.FC = () => {
           {output ? (
             <div className="text-white bg-gray-800 p-4 rounded-lg">
               <div className="flex flex-row-reverse">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6" onClick={() => generatePDF(response)}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 </svg>
               </div>
+
               <div dangerouslySetInnerHTML={{ __html: output }} />
             </div>
           ) : (

@@ -1,5 +1,6 @@
 // src/lib/generateCV.ts
 import Groq from 'groq-sdk';
+import { PDFDocument, rgb } from 'pdf-lib';
 
 const groq = new Groq({ apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY, dangerouslyAllowBrowser: true });
 
@@ -76,7 +77,52 @@ const formatCVResponse = (response: string) => {
   return formattedResponse;
 };
 
+const generatePDF = async (response: string) => {
+  const pdfDoc = await PDFDocument.create();
+
+  // Menambahkan halaman baru ke dokumen
+  const page = pdfDoc.addPage([600, 800]);
+  const { width, height } = page.getSize();
+
+  // Mengatur font dan ukuran font
+  const fontSize = 12;
+
+  // Memisahkan respons menjadi baris-baris
+  const lines = response.split('\n');
+
+  // Menggambar teks ke halaman
+  lines.forEach((line, index) => {
+    page.drawText(line, {
+      x: 50,
+      y: height - (50 + index * (fontSize + 5)), // Mengatur posisi Y untuk setiap baris
+      size: fontSize,
+      color: rgb(0, 0, 0),
+    });
+  });
+
+  // Menyimpan dokumen sebagai byte array
+  const pdfBytes = await pdfDoc.save();
+
+  // Membuat Blob dari byte array
+  const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+
+  // Membuat URL objek untuk Blob tersebut
+  const url = URL.createObjectURL(blob);
+
+  // Membuat elemen tautan unduhan
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'CV-AI.pdf';
+  
+  // Memicu klik tautan untuk mengunduh PDF
+  link.click();
+
+  // Membersihkan URL objek
+  URL.revokeObjectURL(url);
+};
+
 export {
   generateCV,
   formatCVResponse,
+  generatePDF,
 };
