@@ -2,15 +2,9 @@
 'use client';
 
 import React, { useState, useRef, ChangeEvent, RefObject } from 'react';
-import { useRouter } from 'next/navigation';
-import checkAuth from '../hooks/checkAuth';
-import { logout } from '../lib/firebase';
-import { generateCV } from '../lib/generateCV';
+import { generateCV, formatCVResponse } from '../lib/generateCV';
 
 const ChatBot: React.FC = () => {
-  const { user, status } = checkAuth();
-  const router = useRouter();
-
   const [input, setInput] = useState<string>('');
   const [output, setOutput] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -18,13 +12,19 @@ const ChatBot: React.FC = () => {
   const textareaRef: RefObject<HTMLTextAreaElement> = useRef<HTMLTextAreaElement>(null);
 
   const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    setInput(e.target.value);
+    const text = e.target.value;
+    const wordCount = text.trim().split(/\s+/).length;
 
+    if (wordCount > 2048) {
+      alert("Maximum 2048 words allowed.");
+      return;
+    }
+
+    setInput(text);
     // Menyesuaikan tinggi textarea secara otomatis
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-
       // Membatasi height maksimal untuk scrollbar
       if (textareaRef.current.scrollHeight > 150) {
         textareaRef.current.style.height = '150px';
@@ -41,8 +41,9 @@ const ChatBot: React.FC = () => {
     setLoading(true);
 
     try {
-      const cvContent = await generateCV(input);
-      setOutput(cvContent);
+      const response = await generateCV(input);
+      const formattedCV = formatCVResponse(response);
+      setOutput(formattedCV);
     } catch (error) {
       console.error('Error generating CV:', error);
       setOutput('Failed to generate CV');
@@ -51,38 +52,25 @@ const ChatBot: React.FC = () => {
     }
   };
 
-  if (status === 'unauthenticated') {
-    router.push('/login');
-  }
-  
-  if (status !== 'authenticated' ) {
-    return <div>Loading...</div>;
-  }
-
   return (
     <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
       <header className="p-4 bg-gray-700 text-white flex justify-between items-center">
         <h1 className="text-xl font-bold">CV-AI</h1>
-        <button 
-          onClick={logout} 
-          className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
-        >
-          Logout
-        </button>
       </header>
 
       <div className="flex-grow p-6 overflow-y-auto">
         <div className="space-y-4">
-          {output && (
+          {output ? (
             <div className="text-white bg-gray-800 p-4 rounded-lg">
               <div className="flex flex-row-reverse">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>              
+                </svg>
               </div>
-
-              {output}
+              <div dangerouslySetInnerHTML={{ __html: output }} />
             </div>
+          ) : (
+            <p className="text-gray-500">No CV generated yet.</p>
           )}
         </div>
       </div>
@@ -109,7 +97,7 @@ const ChatBot: React.FC = () => {
       </div>
 
       <footer className="p-4 bg-gray-300 dark:bg-gray-800 text-center text-sm text-gray-700 dark:text-gray-400">
-        © 2024 ChatGPT AI
+        © 2024 Groq AI
       </footer>
     </div>
   );
