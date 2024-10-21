@@ -1,89 +1,62 @@
-// src/lib/generateCV.ts
 import Groq from 'groq-sdk';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 
-async function generateCV(userInput: string): Promise<string> {
+async function generateCv(userInput: string): Promise<any> {
   try {
     const groq = new Groq({ apiKey: process.env.NEXT_PUBLIC_GROQ_API_KEY, dangerouslyAllowBrowser: true });
-    // Mengirimkan permintaan ke model bahasa
     const response = await groq.chat.completions.create({
       messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
         {
           role: 'user',
           content: `Generate a CV ATS Friendly and professional based on the following information: ${userInput}`,
         },
       ],
-      temperature: 1.0,
+      temperature: 0.7,
       top_p: 0.9,
-      frequency_penalty: 2.0,
-      model: 'llama3-8b-8192', // Pastikan model yang Anda gunakan sesuai dengan yang tersedia di SDK
+      frequency_penalty: 0.8,
+      model: 'gemma2-9b-it',
     });
 
-    // Mengambil hasil dari response
-    const cvContent = response.choices[0]?.message?.content || '';
-
-    return cvContent;
+    return response.choices[0]?.message?.content ?? '';
   } catch (error) {
-    console.error('Error generating CV with GROQ SDK:', error);
-    throw new Error('Failed to generate CV');
+    console.error(error);
+    return 'Failed to generate CV';
   }
 }
 
-const formatCVResponse = (response: string) => {
-  let formattedResponse = '';
+const formattedCv = (response: string) => {
+  let formattedCv = '';
 
-  // Pisahkan setiap baris untuk pemrosesan lebih mudah
   const lines = response.split('\n');
-
   lines.forEach((line) => {
     // Hapus spasi tambahan
     line = line.trim();
-
-    // Ganti **bold text** dengan <strong>bold text</strong>
-    line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-
-    // Cek untuk bagian header
-    if (/^\*.*:\*$/.test(line)) {
-      // Jika baris merupakan header (misalnya: *Education:*)
-      const headerText = line.replace(/\*/g, '');
-      formattedResponse += `<h3>${headerText}</h3><ul>`;
-    } else if (/^\* .+/.test(line)) {
-      // Jika baris merupakan item list (misalnya: * Email: xxx)
-      const listItemText = line.replace(/^\* /, '');
-      formattedResponse += `<li>${listItemText}</li>`;
-    } else if (/^\t\+ .+/.test(line)) {
-      // Jika baris merupakan sub-list dengan indentasi (misalnya: + Participated in ...)
-      const subListItemText = line.replace(/^\t\+ /, '');
-      formattedResponse += `<ul><li>${subListItemText}</li></ul>`;
-    } else if (line === '') {
-      // Jika ada baris kosong, tutup list jika ada yang terbuka
-      if (formattedResponse.endsWith('<ul>')) {
-        formattedResponse = formattedResponse.slice(0, -4) + '</ul>';
-      } else if (formattedResponse.endsWith('</li>')) {
-        formattedResponse += '</ul>';
-      }
+    if (line === '') {
+      formattedCv += '';
     } else {
-      // Jika baris adalah paragraf teks biasa
-      formattedResponse += `<p>${line}</p>`;
+      // Menghapus #
+      line = line.replace(/#/g, '');
+      // Mengubah ** ** menjadi <strong> </strong>
+      line = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      // Mengubah * menjadi -
+      line = line.replace(/\*/, '-');
+      // Menambahakan ke formattedCv
+      formattedCv += `<p>${line}</p>`;
     }
-  });
+  })
 
-  // Pastikan semua tag terbuka ditutup
-  if (formattedResponse.includes('<ul>') && !formattedResponse.includes('</ul>')) {
-    formattedResponse += '</ul>';
-  }
-
-  return formattedResponse;
+  return formattedCv;
 };
 
-const generatePDF = async (response: string) => {
+const generateCvPdf = async (response: string) => {
   // Memformat response
-  let checkNote = false
+  let checkReferences = false
   const formattedResponse = response
     .split('\n')
     .filter(e => {
-      if (e.toLowerCase().includes('note')) checkNote = true;
-      if (checkNote) return false; 
+      if (e.toLowerCase().includes('references')) checkReferences = true;
+      if (checkReferences) return false; 
       return true;
     })
     .filter(
@@ -94,36 +67,43 @@ const generatePDF = async (response: string) => {
       !line.toLowerCase().includes('format') &&
       !line.toLowerCase().includes('use') &&
       !line.toLowerCase().includes('customize') &&
-      !line.toLowerCase().includes('your')
+      !line.toLowerCase().includes('your') &&
+      !line.toLowerCase().includes('note') &&
+      !line.toLowerCase().includes('tips') &&
+      !line.toLowerCase().includes('ats') &&
+      !line.toLowerCase().includes('keep') &&
+      !line.toLowerCase().includes('important')
     )
-    .filter(e => !(e == ''))
+    .filter(e => e != '')
     .map(line => line.replace(/\*\*/g, '').trim())
     .map(line => line.replace(/\*/g, '-').trim())
+    .map(line => line.replace(/#/g, "").trim())
+
 
   // Menyiapkan pdf
   const pdfDoc = await PDFDocument.create();
-
-  // Mengatur ukuran halaman A4
-  let page = pdfDoc.addPage([600, 800]);
-  const { width, height } = page.getSize();
-
   // Mengatur font dan ukuran font
   const timesRomanFont = await pdfDoc.embedFont(StandardFonts.TimesRoman);
   const fontSize = 12;
-
-  // Menggambar teks ke halaman
+  // Mengatur ukuran halaman A4 dan margin
+  let page = pdfDoc.addPage([600, 800]);
+  const { width, height } = page.getSize();
   const margin = 50;
   let currentY = height - margin;
+
+  // Menggambar teks ke halaman
   formattedResponse.forEach((line) => {
-    // Mengukur lebar teks saat ini
+    // Mengukur lebar teks
     const textWidth = timesRomanFont.widthOfTextAtSize(line, fontSize);
 
-    if (textWidth < width - 2 * margin) { // Mengurangi margin dari kiri dan kanan
+    // Mengecek apakah teks cukup dengan lebar halaman
+    if (textWidth < width - 2 * margin) { 
+      // Jika tidak cukup ruang di halaman saat ini, buat halaman baru
       if (currentY - fontSize - 5 < margin) {
-        // Jika tidak cukup ruang di halaman saat ini, buat halaman baru
         page = pdfDoc.addPage([600, 800]);
         currentY = height - margin;
       }
+      // Gambar teks saat ini
       page.drawText(line, {
         x: margin,
         y: currentY,
@@ -131,25 +111,31 @@ const generatePDF = async (response: string) => {
         size: fontSize,
         color: rgb(0, 0, 0),
       });
-      currentY -= fontSize + 5; // Menurunkan posisi Y untuk baris berikutnya
+      // Menurunkan posisi Y untuk baris berikutnya
+      currentY -= fontSize + 5;
+
+    // Jika lebar teks melebihi lebar halaman
     } else {
-      // Jika lebar teks melebihi lebar halaman, bungkus teksnya
       const words = line.split(' ');
       let currentLine = '';
 
       words.forEach((word) => {
+        // Mengukur lebar teks
         const testLine = currentLine + (currentLine ? ' ' : '') + word;
         const testLineWidth = timesRomanFont.widthOfTextAtSize(testLine, fontSize);
 
+        // Mengecek apakah teks cukup dengan lebar halaman
         if (testLineWidth < width - 2 * margin) {
+          // Menambahkan word ke currentLine
           currentLine = testLine;
+
+        // Jika testLineWidth sudah melebihi lebar halaman
         } else {
           // Jika tidak cukup ruang di halaman saat ini, buat halaman baru
           if (currentY - fontSize - 5 < margin) {
             page = pdfDoc.addPage([600, 800]);
             currentY = height - margin;
           }
-
           // Gambar teks saat ini
           page.drawText(currentLine, {
             x: margin,
@@ -158,12 +144,14 @@ const generatePDF = async (response: string) => {
             size: fontSize,
             color: rgb(0, 0, 0),
           });
-          currentY -= fontSize + 5; // Menurunkan posisi Y untuk baris berikutnya
-          currentLine = word; // Mulai baris baru
+          // Menurunkan posisi Y untuk baris berikutnya
+          currentY -= fontSize + 5; 
+          // Mulai baris baru
+          currentLine = word; 
         }
       });
 
-      // Gambar baris terakhir jika ada
+      // Gambar baris terakhir jika masih ada
       if (currentLine) {
         // Jika tidak cukup ruang di halaman saat ini, buat halaman baru
         if (currentY - fontSize - 5 < margin) {
@@ -182,6 +170,7 @@ const generatePDF = async (response: string) => {
       }
     }
   });
+
 
   // Menyimpan dokumen sebagai byte array
   const pdfBytes = await pdfDoc.save();
@@ -205,7 +194,7 @@ const generatePDF = async (response: string) => {
 };
 
 export {
-  generateCV,
-  formatCVResponse,
-  generatePDF,
+  generateCv,
+  formattedCv,
+  generateCvPdf,
 };

@@ -2,9 +2,10 @@
 'use client';
 
 import React, { useState, useRef, ChangeEvent, RefObject } from 'react';
-import { generateCV, formatCVResponse, generatePDF } from '../lib/generateCV';
+import Image from 'next/image'
+import { generateCv, formattedCv, generateCvPdf } from '../lib/cvGenerator';
 
-const ChatBot: React.FC = () => {
+const Page: React.FC = () => {
   const [input, setInput] = useState<string>('');
   const [output, setOutput] = useState<string>('');
   const [response, setResponse] = useState<string>('');
@@ -14,13 +15,6 @@ const ChatBot: React.FC = () => {
 
   const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const text = e.target.value;
-    const wordCount = text.trim().split(/\s+/).length;
-
-    if (wordCount > 2048) {
-      alert('Maximum 2048 words allowed.');
-      return;
-    }
-
     setInput(text);
 
     if (textareaRef.current) {
@@ -36,21 +30,26 @@ const ChatBot: React.FC = () => {
     }
   };
 
-  const createCV = async () => {
-    if (!input.trim()) return;
-
-    setLoading(true);
-
-    try {
-      const response = await generateCV(input);
-      setResponse(response);
-      const formattedCV = formatCVResponse(response);
-      setOutput(formattedCV);
-    } catch (error) {
-      console.error('Error generating CV:', error);
-      setOutput('Failed to generate CV');
-    } finally {
-      setLoading(false);
+  const getCv = async () => {
+    if (!input) return;
+    const wordCount = input.trim().split(/\s+/).length;
+    const maxWord = 1450;
+    if (wordCount > maxWord) {
+      alert(`Maximum ${maxWord} words allowed.`);
+    } else {
+      setLoading(true);
+      try {
+        const response = await generateCv(input);
+        setResponse(response);
+        setOutput(formattedCv(response));
+        console.log(response)
+        console.log(formattedCv(response))
+      } catch (error) {
+        console.error('Error generating CV:', error);
+        setOutput('Failed to generate CV');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -62,18 +61,40 @@ const ChatBot: React.FC = () => {
 
       <div className="flex-grow p-6 overflow-y-auto">
         <div className="space-y-4">
-          {output ? (
-            <div className="text-white bg-gray-800 p-4 rounded-lg">
-              <div className="flex flex-row-reverse">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6" onClick={() => generatePDF(response)}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                </svg>
-              </div>
-
-              <div dangerouslySetInnerHTML={{ __html: output }} />
-            </div>
+          {loading ? (
+            <Image
+              src="/loading.gif"
+              alt="Loading Image"
+              width={180}
+              height={20}
+            />
           ) : (
-            <p className="text-gray-500">No CV generated yet.</p>
+            <>
+              {output ? (
+                <div className="text-white bg-gray-800 p-4 rounded-lg">
+                  <div className="flex flex-row-reverse">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      strokeWidth={1.5}
+                      stroke="currentColor"
+                      className="size-6 cursor-pointer"
+                      onClick={() => generateCvPdf(response)}
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
+                      />
+                    </svg>
+                  </div>
+                  <div dangerouslySetInnerHTML={{ __html: output }} />
+                </div>
+              ) : (
+                <p className="text-gray-500">No CV generated yet.</p>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -85,12 +106,12 @@ const ChatBot: React.FC = () => {
             className="flex-grow p-2 text-black rounded-l-lg border-none focus:outline-none resize-none"
             style={{ maxHeight: '150px' }}
             rows={1}
-            placeholder="Create your CV here..."
+            placeholder="Write about yourself..."
             value={input}
             onChange={handleInputChange}
           />
           <button
-            onClick={createCV}
+            onClick={getCv}
             className="p-2 bg-blue-600 text-white rounded-r-lg"
             disabled={loading}
           >
@@ -106,4 +127,4 @@ const ChatBot: React.FC = () => {
   );
 };
 
-export default ChatBot;
+export default Page;
