@@ -1,127 +1,63 @@
-// src/app/page.tsx
-'use client';
+"use client";
 
-import React, { useState, useRef, ChangeEvent, RefObject } from 'react';
-import Image from 'next/image'
-import { generateCv, formattedCv, generateCvPdf } from '../lib/cvGenerator';
+import React from "react";
+import Link from 'next/link'
+import { Button } from "@/components/ui/button";
+import { motion } from "framer-motion";
 
-const Page: React.FC = () => {
-  const [input, setInput] = useState<string>('');
-  const [output, setOutput] = useState<string>('');
-  const [response, setResponse] = useState<string>('');
-  const [loading, setLoading] = useState<boolean>(false);
-
-  const textareaRef: RefObject<HTMLTextAreaElement> = useRef<HTMLTextAreaElement>(null);
-
-  const handleInputChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
-    const text = e.target.value;
-    setInput(text);
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-
-      if (textareaRef.current.scrollHeight > 150) {
-        textareaRef.current.style.height = '150px';
-        textareaRef.current.style.overflowY = 'scroll';
-      } else {
-        textareaRef.current.style.overflowY = 'hidden';
-      }
-    }
-  };
-
-  const getCv = async () => {
-    if (!input) return;
-    const wordCount = input.trim().split(/\s+/).length;
-    const maxWord = 1450;
-    if (wordCount > maxWord) {
-      alert(`Maximum ${maxWord} words allowed.`);
-    } else {
-      setLoading(true);
-      try {
-        const response = await generateCv(input);
-        setResponse(response);
-        setOutput(formattedCv(response));
-        console.log(response)
-        console.log(formattedCv(response))
-      } catch (error) {
-        console.error('Error generating CV:', error);
-        setOutput('Failed to generate CV');
-      } finally {
-        setLoading(false);
-      }
-    }
-  };
-
+const Page = () => {
   return (
-    <div className="flex flex-col h-screen bg-gray-100 dark:bg-gray-900">
-      <header className="p-4 bg-gray-700 text-white flex justify-between items-center">
-        <h1 className="text-xl font-bold">CV-AI</h1>
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 p-4">
+      <header className="container mx-auto flex justify-between items-center py-6">
+        <div className="text-2xl font-bold text-blue-600">CV-AI</div>
+        <nav>
+          <ul className="flex space-x-6 text-gray-700">
+            <li><a href="#contact" className="hover:text-blue-600">Contact</a></li>
+          </ul>
+        </nav>
       </header>
 
-      <div className="flex-grow p-6 overflow-y-auto">
-        <div className="space-y-4">
-          {loading ? (
-            <Image
-              src="/loading.gif"
-              alt="Loading Image"
-              width={180}
-              height={20}
-            />
-          ) : (
-            <>
-              {output ? (
-                <div className="text-white bg-gray-800 p-4 rounded-lg">
-                  <div className="flex flex-row-reverse">
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      strokeWidth={1.5}
-                      stroke="currentColor"
-                      className="size-6 cursor-pointer"
-                      onClick={() => generateCvPdf(response)}
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3"
-                      />
-                    </svg>
-                  </div>
-                  <div dangerouslySetInnerHTML={{ __html: output }} />
-                </div>
-              ) : (
-                <p className="text-gray-500">No CV generated yet.</p>
-              )}
-            </>
-          )}
-        </div>
-      </div>
+      <main className="container mx-auto mt-16 text-center">
+        <motion.div 
+          initial={{ opacity: 0, y: 50 }} 
+          animate={{ opacity: 1, y: 0 }} 
+          transition={{ duration: 0.8 }}
+          className="mb-12">
+          <h1 className="text-4xl font-extrabold text-gray-800 mb-4">Create Your Professional CV with Ease</h1>
+          <p className="text-lg text-gray-600 mb-6">Leverage the power of AI to craft a personalized CV in minutes.</p>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded">
+            <Link href={`/cv_builder`}>{`Get Started`}</Link>
+          </Button>
+        </motion.div>
 
-      <div className="p-4 bg-gray-200 dark:bg-gray-800">
-        <div className="flex">
-          <textarea
-            ref={textareaRef}
-            className="flex-grow p-2 text-black rounded-l-lg border-none focus:outline-none resize-none"
-            style={{ maxHeight: '150px' }}
-            rows={1}
-            placeholder="Write about yourself..."
-            value={input}
-            onChange={handleInputChange}
-          />
-          <button
-            onClick={getCv}
-            className="p-2 bg-blue-600 text-white rounded-r-lg"
-            disabled={loading}
-          >
-            {loading ? 'Generating...' : 'Create'}
-          </button>
-        </div>
-      </div>
+        <motion.div 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          transition={{ delay: 0.4, duration: 0.8 }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 shadow rounded-lg">
+            <h3 className="text-xl font-semibold text-gray-800">Fast & Easy</h3>
+            <p className="text-gray-600 mt-2">Input your CV details and create your CV in just a few clicks—quick, simple, and hassle-free.</p>
+          </div>
+          <div className="bg-white p-6 shadow rounded-lg">
+            <h3 className="text-xl font-semibold text-gray-800">ATS Optimized</h3>
+            <p className="text-gray-600 mt-2">Ensure your CV gets past Applicant Tracking Systems (ATS) effortlessly.</p>
+          </div>
+          <div className="bg-white p-6 shadow rounded-lg">
+            <h3 className="text-xl font-semibold text-gray-800">Download as PDF</h3>
+            <p className="text-gray-600 mt-2">Generate and download your CV instantly in high-quality PDF format.</p>
+          </div>
+        </motion.div>
+      </main>
 
-      <footer className="p-4 bg-gray-300 dark:bg-gray-800 text-center text-sm text-gray-700 dark:text-gray-400">
-        © 2024 Groq AI
+      <footer id="contact" className="mt-24 py-8 bg-blue-600 text-white rounded-lg">
+        <div className="container mx-auto text-center px-4">
+          <p className="text-lg">
+            Have questions? Reach us at <a href="mailto:valentinovbill0@gmail.com" className="underline ml-1">valentinovbill0@gmail.com</a>
+          </p>
+          <p className="mt-4 font-semibold">Valentinov Software</p>
+          <p className="mt-2 text-sm opacity-80">© {new Date().getFullYear()} All Rights Reserved.</p>
+        </div>
       </footer>
     </div>
   );
